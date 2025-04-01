@@ -3,6 +3,7 @@ import joblib
 import re
 import urllib.parse
 from telegram import Update
+from telegram import ChatMember, ChatMemberAdministrator, ChatMemberOwner
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 from telegram.error import TimedOut, NetworkError
 import os
@@ -14,6 +15,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 TOKEN = os.getenv("BOT_TOKEN")
+
+feature_states = {}
 
 try:
     message_model = joblib.load("Spam_model.pkl")
@@ -93,6 +96,38 @@ def extract_news_components(text):
         content = text
     return title, content
 
+def is_admin(update: Update) -> bool:
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    member = update.effective_chat.get_member(user_id)
+    return isinstance(member, (ChatMemberAdministrator, ChatMemberOwner))
+
+async def toggle_feature(update: Update, context: CallbackContext) -> None:
+    if not is_admin(update):
+        await update.message.reply_text("❌ You must be a group admin to use this command.")
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text("Usage: /toggle <feature> <on/off>\nAvailable features: spam, links, fake_news")
+        return
+
+    feature, state = context.args[0].lower(), context.args[1].lower()
+    chat_id = update.effective_chat.id
+
+    if feature not in ["spam", "links", "fake_news"]:
+        await update.message.reply_text("Invalid feature. Available features: spam, links, fake_news")
+        return
+
+    if state not in ["on", "off"]:
+        await update.message.reply_text("Invalid state. Use 'on' or 'off'.")
+        return
+
+    if chat_id not in feature_states:
+        feature_states[chat_id] = {"spam": True, "links": True, "fake_news": True}
+
+    feature_states[chat_id][feature] = (state == "on")
+    await update.message.reply_text(f"Feature '{feature}' has been turned {'ON' if state == 'on' else 'OFF'}.")
+
 async def analyze_message(update: Update, context: CallbackContext) -> None:
     message_text = update.message.text
     try:
@@ -132,6 +167,55 @@ async def analyze_message(update: Update, context: CallbackContext) -> None:
                     await update.message.reply_text(result_text, reply_to_message_id=update.message.message_id)
     except Exception as e:
         logger.error(f"Error in fake news detection: {e}")
+        hat_id = update.effective_chat.id
+    chat_id = update.effective_chat.id    
+    if chat_id not in feature_states:
+        feature_states[chat_id] = {"spam": True, "links": True, "fake_news": True}
+
+    message_text = update.message.text
+
+    try:
+        if feature_states[chat_id]["links"]:
+            urls = extract_urls(message_text)
+            if urls:
+                malicious_links = []
+                for url in urls:
+                    if is_malicious_link(url):
+                        malicious_links.append(url)
+                if malicious_links:
+                    warning_text = f"⚠️ MALICIOUS LINK DETECTED: Found {len(malicious_links)} dangerous link(s) in your message"
+                    await update.message.reply_text(warning_text, reply_to_message_id=update.message.message_id)
+                    logger.warning(f"Detected malicious links: {malicious_links}")
+    except Exception as e:
+        logger.error(f"Error in malicious link detection: {e}")
+
+    try:
+        if feature_states[chat_id]["spam"]:
+            user_message = clean_text(message_text)
+            transformed_text = message_vectorizer.transform([user_message])
+            spam_prediction = message_model.predict(transformed_text)[0]
+            if spam_prediction != 1:
+                await update.message.reply_text("🚨 Message Appears to be Spam", reply_to_message_id=update.message.message_id)
+    except Exception as e:
+        logger.error(f"Error in spam detection: {e}")
+
+    try:
+        if feature_states[chat_id]["fake_news"]:
+            title, content = extract_news_components(message_text)
+            if len(message_text) > 50:
+                fake_news_results = detect_fake_news(title, content)
+                if fake_news_results:
+                    is_fake = any(result[1] == 1 for result in fake_news_results)
+                    if is_fake:
+                        details = []
+                        for analysis_type, prediction, probability in fake_news_results:
+                            status = "FAKE" if prediction == 1 else "REAL"
+                            confidence = probability * 100
+                            details.append(f"{analysis_type}: {status} (Confidence: {confidence:.1f}%)")
+                        result_text = "🔍 POTENTIAL FAKE NEWS DETECTED:\n" + "\n".join(details)
+                        await update.message.reply_text(result_text, reply_to_message_id=update.message.message_id)
+    except Exception as e:
+        logger.error(f"Error in fake news detection: {e}")
 
 async def analyze_news(update: Update, context: CallbackContext) -> None:
     if context.args:
@@ -153,6 +237,20 @@ async def analyze_news(update: Update, context: CallbackContext) -> None:
     else:
         result_text = "Unable to analyze the provided news text"
     await update.message.reply_text(result_text)
+
+async def feature_status(update: Update, context: CallbackContext) -> None:
+    chat_id = update.effective_chat.id
+    if chat_id not in feature_states:
+        feature_states[chat_id] = {"spam": True, "links": True, "fake_news": True}
+
+    status = feature_states[chat_id]
+    status_text = (
+        f"Feature Status:\n"
+        f"• Spam Detection: {'ON' if status['spam'] else 'OFF'}\n"
+        f"• Malicious Link Detection: {'ON' if status['links'] else 'OFF'}\n"
+        f"• Fake News Detection: {'ON' if status['fake_news'] else 'OFF'}"
+    )
+    await update.message.reply_text(status_text)
 
 async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(
@@ -185,6 +283,8 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("checknews", analyze_news))
+    app.add_handler(CommandHandler("toggle", toggle_feature))
+    app.add_handler(CommandHandler("status", feature_status))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, analyze_message))
     app.add_error_handler(error_handler)
     logger.info("Bot is running with spam, malicious link, and fake news detection...")

@@ -36,16 +36,16 @@ def load_models():
     global tfidf_vectorizer, tfidf_title_vectorizer, tfidf_text_vectorizer
     
     try:
-        message_model = joblib.load("og_spam_model.pkl")
-        message_vectorizer = joblib.load("og_spam_count_vectorizer.pkl")
-        link_model = joblib.load("model.pkl")
-        link_vectorizer = joblib.load("tfidf_vectorizer.pkl")
-        nb_model = joblib.load("naive_bayes_model.pkl")
-        nb_title_model = joblib.load("naive_bayes_title_model.pkl")
-        nb_text_model = joblib.load("naive_bayes_text_model.pkl")
-        tfidf_vectorizer = joblib.load("tfidf_vectorizer (2).pkl")
-        tfidf_title_vectorizer = joblib.load("tfidf_vectorizer_title.pkl")
-        tfidf_text_vectorizer = joblib.load("tfidf_vectorizer_text.pkl")
+        message_model = joblib.load("./Models/Spam_Model.pkl")
+        message_vectorizer = joblib.load("./Models/Spam_Vectoriser.pkl")
+        link_model = joblib.load("./Models/Link_Model.pkl")
+        link_vectorizer = joblib.load("./Models/Link_Vectoriser.pkl")
+        nb_model = joblib.load("./Models/NEWS_Model.pkl")
+        nb_title_model = joblib.load("./Models/NEWS_title_Model.pkl")
+        nb_text_model = joblib.load("./Models/NEWS_text_Model.pkl")
+        tfidf_vectorizer = joblib.load("./Models/NEWS_Vectoriser.pkl")
+        tfidf_title_vectorizer = joblib.load("./Models/NEWS_title_Vectoriser.pkl")
+        tfidf_text_vectorizer = joblib.load("./Models/NEWS_text_Vectoriser.pkl")
         logger.info("All detection models loaded successfully.")
         return True
     except Exception as e:

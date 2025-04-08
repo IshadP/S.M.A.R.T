@@ -1,13 +1,23 @@
 #!/bin/bash
 
-cd S.M.A.R.T || { echo "❌ Cannot find S.M.A.R.T directory."; exit 1; }
-
 if [ -d "venv" ]; then
     source venv/bin/activate
 else
     echo "⚠️ Virtual environment not found. Run the setup script first."
     exit 1
 fi
+
+if [ ! -f ".env" ]; then
+    echo "❌ .env file not found. Please create it and add the BOT_TOKEN."
+    exit 1
+fi
+
+if ! grep -q "^BOT_TOKEN=" .env; then
+    echo "❌ BOT_TOKEN is not set in the .env file. Please add it."
+    exit 1
+fi
+
+export $(grep -v '^#' .env | xargs)
 
 if [ -z "$BOT_TOKEN" ]; then
     echo "❌ BOT_TOKEN is not set in the environment. Please add it to your .env file."

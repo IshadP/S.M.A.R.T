@@ -113,18 +113,41 @@ def extract_news_components(text):
     return title, content
 
 def detect_fake_news(title="", content=""):
-    try:
+    ttry:
         results = []
+
         if title and content:
-            combined_text = f"{title} {content}"
-            combined_features = tfidf_vectorizer.transform([combined_text])
-            combined_prediction = nb_model.predict(combined_features)[0]
-            combined_prob = nb_model.predict_proba(combined_features)[0]
-            fake_prob = combined_prob[1] if combined_prediction == 1 else combined_prob[0]
-            results.append(("Combined analysis", combined_prediction, fake_prob))
+            try:
+                combined_text = f"{title} {content}"
+                # Make sure to use the correct vectorizer that matches the model
+                combined_features = tfidf_vectorizer.transform([combined_text])
+                combined_prediction = nb_model.predict(combined_features)[0]
+                combined_prob = nb_model.predict_proba(combined_features)[0]
+                fake_prob = combined_prob[1] if combined_prediction == 1 else combined_prob[0]
+                results.append(("Combined analysis", combined_prediction, fake_prob))
+            except Exception as e:
+                logger.error(f"Error in combined fake news detection: {e}")
+    
         if title:
-            title_features = tfidf_title_vectorizer.transform([title])
-            title_prediction = nb_title_model.predict(title_features)[0]
+            try:
+                title_features = tfidf_title_vectorizer.transform([title])
+                title_prediction = nb_title_model.predict(title_features)[0]
+                title_prob = nb_title_model.predict_proba(title_features)[0]
+                fake_prob = title_prob[1] if title_prediction == 1 else title_prob[0]
+                results.append(("Title analysis", title_prediction, fake_prob))
+            except Exception as e:
+                logger.error(f"Error in title fake news detection: {e}")
+
+        if content:
+            try:
+                content_features = tfidf_text_vectorizer.transform([content])
+                content_prediction = nb_text_model.predict(content_features)[0]
+                content_prob = nb_text_model.predict_proba(content_features)[0]
+                fake_prob = content_prob[1] if content_prediction == 1 else content_prob[0]
+                results.append(("Content analysis", content_prediction, fake_prob))
+            except Exception as e:
+                logger.error(f"Error in content fake news detection: {e}")
+        
         return results
     except Exception as e:
         logger.error(f"Error detecting fake news: {e}")

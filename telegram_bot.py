@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+bot_active = True
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ def load_models():
         logger.error(f"Error loading detection models: {e}")
         return False
 
-def clean_text(text)
+def clean_text(text):
     text = text.lower().strip()
     text = re.sub(r"\W+", " ", text)
     text = re.sub(r"\d+", "", text)
@@ -124,15 +125,6 @@ def detect_fake_news(title="", content=""):
         if title:
             title_features = tfidf_title_vectorizer.transform([title])
             title_prediction = nb_title_model.predict(title_features)[0]
-            title_prob = nb_title_model.predict_proba(title_features)[0]
-            fake_prob_title = title_prob[1] if title_prediction == 1 else title_prob[0]
-            results.append(("Title analysis", title_prediction, fake_prob_title))
-        if content:
-            content_features = tfidf_text_vectorizer.transform([content])
-            content_prediction = nb_text_model.predict(content_features)[0]
-            content_prob = nb_text_model.predict_proba(content_features)[0]
-            fake_prob_content = content_prob[1] if content_prediction == 1 else content_prob[0]
-            results.append(("Content analysis", content_prediction, fake_prob_content))
         return results
     except Exception as e:
         logger.error(f"Error detecting fake news: {e}")
@@ -149,6 +141,11 @@ async def is_admin(update: Update) -> bool:
     except Exception as e:
         logger.error(f"Error checking admin status: {e}")
         return False
+
+async def stop(update: Update, context: CallbackContext) -> None:
+    global bot_active
+    bot_active = False 
+    await update.message.reply_text("Bot has been stopped. Type /start to activate it again.")
 
 async def toggle_feature(update: Update, context: CallbackContext) -> None:
     if not await is_admin(update):
@@ -212,6 +209,9 @@ async def analyze_message(update: Update, context: CallbackContext) -> None:
                 await update.message.reply_text(result_text, reply_to_message_id=update.message.message_id)
 
 async def analyze_news(update: Update, context: CallbackContext) -> None:
+    global bot_active
+    if not bot_active:
+        return
     if context.args:
         news_text = ' '.join(context.args)
     elif update.message.reply_to_message and update.message.reply_to_message.text:
@@ -251,7 +251,8 @@ async def feature_status(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(status_text)
 
 async def start(update: Update, context: CallbackContext) -> None:
-    """Handle the /start command."""
+    global bot_active
+    bot_active = True
     await update.message.reply_text(
         "Hello! I am a security bot that can detect:\n"
         "1. Spam content in messages\n"
@@ -290,6 +291,7 @@ def main():
     app = Application.builder().token(TOKEN).read_timeout(30).write_timeout(30).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("stop", stop))
     app.add_handler(CommandHandler("checkmessage", analyze_news))
     app.add_handler(CommandHandler("toggle", toggle_feature))
     app.add_handler(CommandHandler("status", feature_status))

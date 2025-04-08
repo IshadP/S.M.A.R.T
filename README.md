@@ -86,7 +86,5 @@ For issues or improvements, feel free to open an [Issue](https://github.com/Isha
 
 ### 🔗 Script Download Links
 
-Once you upload the scripts to your GitHub under the `scripts/` folder:
-
 - 📥 [setup_smart_bot.sh](https://raw.githubusercontent.com/IshadP/S.M.A.R.T/main/scripts/setup_and_run_bot.sh)
 - 🔄 [update_and_run_bot.sh](https://raw.githubusercontent.com/IshadP/S.M.A.R.T/main/start.sh)

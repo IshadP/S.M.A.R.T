@@ -57,6 +57,7 @@ chmod +x start.sh
 ```
 S.M.A.R.T/
 ├── telegram_bot.py
+├── start.sh
 ├── models/
 │   ├── spam_model.joblib
 │   ├── spam_vectorizer.joblib
@@ -66,8 +67,7 @@ S.M.A.R.T/
 ├── requirements.txt
 ├── .env
 └── scripts/
-    ├── setup_smart_bot.sh
-    └── start.sh
+    ├── setup_and_run_bot.sh
 ```
 
 ---
@@ -88,5 +88,5 @@ For issues or improvements, feel free to open an [Issue](https://github.com/Isha
 
 Once you upload the scripts to your GitHub under the `scripts/` folder:
 
-- 📥 [setup_smart_bot.sh](https://raw.githubusercontent.com/IshadP/S.M.A.R.T/main/scripts/setup_smart_bot.sh)
-- 🔄 [update_and_run_bot.sh](https://raw.githubusercontent.com/IshadP/S.M.A.R.T/main/scripts/update_and_run_bot.sh)
+- 📥 [setup_smart_bot.sh](https://raw.githubusercontent.com/IshadP/S.M.A.R.T/main/scripts/setup_and_run_bot.sh)
+- 🔄 [update_and_run_bot.sh](https://raw.githubusercontent.com/IshadP/S.M.A.R.T/main/start.sh)

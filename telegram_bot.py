@@ -113,7 +113,7 @@ def extract_news_components(text):
     return title, content
 
 def detect_fake_news(title="", content=""):
-    ttry:
+    try:
         results = []
 
         if title and content:
